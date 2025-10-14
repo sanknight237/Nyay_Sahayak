@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nyay Sahayak - Justice Assistant</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .chat-bubble {
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+        .chat-bubble.bot {
+            border-radius: 1.25rem 1.25rem 1.25rem 0.25rem;
+        }
+        .chat-bubble.user {
+            border-radius: 1.25rem 1.25rem 0.25rem 1.25rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex flex-col items-center justify-center h-screen">
+
+    <div class="w-full max-w-2xl h-full md:h-[90vh] md:max-h-[700px] flex flex-col bg-white shadow-2xl rounded-2xl">
+        <!-- Header -->
+        <header class="bg-blue-600 text-white p-4 rounded-t-2xl flex items-center shadow-md">
+            <svg class="w-8 h-8 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+            <div>
+                <h1 class="text-xl font-bold">Nyay Sahayak</h1>
+                <p class="text-sm opacity-90">Your AI-Powered Legal Assistant</p>
+            </div>
+        </header>
+
+        <!-- Chat Area -->
+        <main id="chat-area" class="flex-1 p-6 overflow-y-auto bg-gray-50">
+            <!-- Initial Bot Message -->
+            <div class="flex justify-start mb-4">
+                <div class="chat-bubble bot bg-blue-500 text-white p-4 rounded-lg">
+                    <p>Hello! I am Nyay Sahayak, your AI legal assistant. How can I help you today? You can ask me to write an FIR, explain a law, or describe your rights.</p>
+                </div>
+            </div>
+        </main>
+
+        <!-- Input Area -->
+        <footer class="p-4 bg-white border-t border-gray-200 rounded-b-2xl">
+            <div class="flex items-center">
+                <input type="text" id="user-input" class="flex-1 border-gray-300 border-2 rounded-full py-3 px-6 focus:outline-none focus:ring-2 focus:ring-blue-500 transition" placeholder="Ask me anything about Indian law...">
+                <button id="send-btn" class="ml-4 bg-blue-600 hover:bg-blue-700 text-white font-bold p-4 rounded-full transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                </button>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        const chatArea = document.getElementById('chat-area');
+        const userInput = document.getElementById('user-input');
+        const sendBtn = document.getElementById('send-btn');
+        // --- This is the new, most important line ---
+        const API_ENDPOINT = "http://127.0.0.1:5000/api/chat";
+
+        // Function to add a message to the chat area
+        const addMessage = (sender, message) => {
+            const messageDiv = document.createElement('div');
+            const bubbleDiv = document.createElement('div');
+            
+            messageDiv.className = `flex mb-4 ${sender === 'user' ? 'justify-end' : 'justify-start'}`;
+            bubbleDiv.className = `chat-bubble p-4 rounded-lg ${sender === 'user' ? 'user bg-gray-200 text-gray-800' : 'bot bg-blue-500 text-white'}`;
+            
+            // Basic sanitation to prevent HTML injection
+            bubbleDiv.innerText = message;
+            
+            messageDiv.appendChild(bubbleDiv);
+            chatArea.appendChild(messageDiv);
+            chatArea.scrollTop = chatArea.scrollHeight; // Auto-scroll to the latest message
+        };
+
+        const handleUserInput = async () => {
+            const message = userInput.value.trim();
+            if (!message) return;
+
+            addMessage('user', message);
+            userInput.value = ''; // Clear input field
+            
+            // --- MODIFIED SECTION ---
+            // This section now sends the user's message to your running Python backend.
+            try {
+                const response = await fetch(API_ENDPOINT, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ message: message })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+
+                const data = await response.json();
+                
+                // Add the bot's response from the backend to the chat
+                addMessage('bot', data.response);
+
+            } catch (error) {
+                console.error('Error fetching from backend:', error);
+                const errorMessage = "Sorry, I'm having trouble connecting to the server. Please ensure the backend is running and try again.";
+                addMessage('bot', errorMessage);
+            }
+        };
+
+        // Event listeners
+        sendBtn.addEventListener('click', handleUserInput);
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                handleUserInput();
+            }
+        });
+    </script>
+</body>
+</html>
+
